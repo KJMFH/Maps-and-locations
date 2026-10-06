@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Location Maps Prototype</title>
 
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
+
     <link
         rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIINfQ3ynrPMqkMZquMZb+UBapENmN/3DgQ="
         crossorigin=""
     >
@@ -158,6 +161,30 @@
             max-width: 70vw;
         }
 
+        /* Keep the basemap selector obvious and independent of Leaflet's
+           little layers.png icon, which can be slow or fail to appear on
+           some mobile connections. */
+        .leaflet-top.leaflet-right {
+            z-index: 1200;
+        }
+
+        .leaflet-control-layers-toggle {
+            width: auto !important;
+            height: auto !important;
+            min-width: 48px;
+            padding: 9px 10px;
+            box-sizing: border-box;
+            background-image: none !important;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .leaflet-control-layers-toggle::before {
+            content: "Maps";
+            color: #17365d;
+            font: 600 13px/1.2 "Segoe UI", Arial, sans-serif;
+        }
+
         @media (max-width: 700px) {
             #controls {
                 width: min(290px, calc(100% - 70px));
@@ -230,7 +257,7 @@
     </div>
 
     <script
-        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""
     ></script>
@@ -278,6 +305,9 @@
                 "World_Street_Map/MapServer/tile/{z}/{y}/{x}",
             {
                 maxZoom: 19,
+                updateWhenIdle: true,
+                updateWhenZooming: false,
+                keepBuffer: 1,
                 attribution: "Tiles &copy; Esri"
             }
         );
@@ -286,6 +316,9 @@
             "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
             {
                 maxZoom: 17,
+                updateWhenIdle: true,
+                updateWhenZooming: false,
+                keepBuffer: 1,
                 attribution:
                     "Map data: &copy; OpenStreetMap contributors, SRTM" +
                     " | Map style: &copy; OpenTopoMap (CC-BY-SA)"
@@ -297,6 +330,9 @@
                 "World_Imagery/MapServer/tile/{z}/{y}/{x}",
             {
                 maxZoom: 19,
+                updateWhenIdle: true,
+                updateWhenZooming: false,
+                keepBuffer: 1,
                 attribution: "Tiles &copy; Esri and imagery providers"
             }
         );
