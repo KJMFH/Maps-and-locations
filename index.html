@@ -1,572 +1,185 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location Maps Prototype</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Location Maps Prototype</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
+<style>
+html, body { height:100%; margin:0; font-family:"Segoe UI",Arial,sans-serif; color:#1f2933; }
+#app, #map { width:100%; height:100%; }
+#app { position:relative; }
 
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin>
+/* Leaflet critical layout styles are embedded so the map does not depend on
+   an external stylesheet before it can render correctly. */
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,
+.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,
+.leaflet-image-layer,.leaflet-layer { position:absolute; left:0; top:0; }
+.leaflet-container { overflow:hidden; background:#ddd; outline-offset:1px; -webkit-tap-highlight-color:transparent; }
+.leaflet-container .leaflet-overlay-pane svg { max-width:none!important; max-height:none!important; }
+.leaflet-container .leaflet-marker-pane img,.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile { max-width:none!important; max-height:none!important; width:auto; padding:0; }
+.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow { -webkit-user-select:none; user-select:none; -webkit-user-drag:none; }
+.leaflet-tile { filter:inherit; visibility:hidden; }
+.leaflet-tile-loaded { visibility:inherit; }
+.leaflet-container.leaflet-touch-zoom { touch-action:pan-x pan-y; }
+.leaflet-container.leaflet-touch-drag { touch-action:none; touch-action:pinch-zoom; }
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom { touch-action:none; }
+.leaflet-pane { z-index:400; }
+.leaflet-tile-pane { z-index:200; }
+.leaflet-overlay-pane { z-index:400; }
+.leaflet-shadow-pane { z-index:500; }
+.leaflet-marker-pane { z-index:600; }
+.leaflet-tooltip-pane { z-index:650; }
+.leaflet-popup-pane { z-index:700; }
+.leaflet-map-pane canvas { z-index:100; }
+.leaflet-map-pane svg { z-index:200; }
+.leaflet-control { position:relative; z-index:800; pointer-events:auto; }
+.leaflet-top,.leaflet-bottom { position:absolute; z-index:1000; pointer-events:none; }
+.leaflet-top { top:0; } .leaflet-right { right:0; } .leaflet-bottom { bottom:0; } .leaflet-left { left:0; }
+.leaflet-control { float:left; clear:both; }
+.leaflet-right .leaflet-control { float:right; }
+.leaflet-top .leaflet-control { margin-top:10px; }
+.leaflet-bottom .leaflet-control { margin-bottom:10px; }
+.leaflet-left .leaflet-control { margin-left:10px; }
+.leaflet-right .leaflet-control { margin-right:10px; }
+.leaflet-bar { box-shadow:0 1px 5px rgba(0,0,0,.65); border-radius:4px; }
+.leaflet-bar a { background:#fff; border-bottom:1px solid #ccc; width:30px; height:30px; line-height:30px; display:block; text-align:center; text-decoration:none; color:#000; font:bold 20px Arial,sans-serif; }
+.leaflet-bar a:first-child { border-radius:4px 4px 0 0; }
+.leaflet-bar a:last-child { border-bottom:0; border-radius:0 0 4px 4px; }
+.leaflet-control-layers { box-shadow:0 1px 5px rgba(0,0,0,.4); background:#fff; border:2px solid rgba(0,0,0,.2); background-clip:padding-box; border-radius:5px; color:#333; }
+.leaflet-control-layers .leaflet-control-layers-list,.leaflet-control-layers-expanded .leaflet-control-layers-toggle { display:none; }
+.leaflet-control-layers-expanded .leaflet-control-layers-list { display:block; position:relative; }
+.leaflet-control-layers-expanded { padding:6px 10px 6px 6px; }
+.leaflet-control-layers-selector { margin-top:2px; position:relative; top:1px; }
+.leaflet-control-layers label { display:block; font-size:13px; line-height:1.5; }
+.leaflet-control-layers-separator { height:0; border-top:1px solid #ddd; margin:5px -10px 5px -6px; }
+.leaflet-container .leaflet-control-attribution { background:rgba(255,255,255,.82); margin:0; padding:0 5px; color:#333; font:11px/1.4 Arial,sans-serif; }
+.leaflet-control-attribution a { color:#0078a8; text-decoration:none; }
 
-    <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIINfQ3ynrPMqkMZquMZb+UBapENmN/3DgQ="
-        crossorigin=""
-    >
-
-    <style>
-        html,
-        body {
-            height: 100%;
-            margin: 0;
-            font-family: "Segoe UI", Arial, sans-serif;
-            color: #1f2933;
-        }
-
-        #app,
-        #map {
-            width: 100%;
-            height: 100%;
-        }
-
-        #app {
-            position: relative;
-        }
-
-        #controls {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            width: min(310px, calc(100% - 80px));
-            box-sizing: border-box;
-            padding: 14px;
-            background: #17365d;
-            color: white;
-            border-radius: 7px;
-            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.22);
-            z-index: 1100;
-            transition: width 0.15s ease, padding 0.15s ease;
-        }
-
-        #controls.collapsed {
-            width: 48px;
-            padding: 6px;
-        }
-
-        .controls-header {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-        }
-
-        #controls h1 {
-            flex: 1;
-            margin: 2px 0 14px;
-            font-size: 20px;
-            line-height: 1.2;
-            font-weight: 600;
-        }
-
-        #panel-toggle {
-            flex: 0 0 36px;
-            width: 36px;
-            height: 36px;
-            padding: 0;
-            border: 1px solid rgba(255, 255, 255, 0.85);
-            border-radius: 4px;
-            background: white;
-            color: #17365d;
-            font: inherit;
-            font-size: 23px;
-            line-height: 1;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        #panel-toggle:hover,
-        #panel-toggle:focus {
-            background: #e8eef5;
-        }
-
-        #controls.collapsed .controls-header {
-            display: block;
-        }
-
-        #controls.collapsed h1,
-        #controls.collapsed .controls-body {
-            display: none;
-        }
-
-        #controls.collapsed #panel-toggle {
-            width: 36px;
-            display: block;
-        }
-
-        .file-button {
-            display: block;
-            width: 100%;
-            box-sizing: border-box;
-            margin-bottom: 10px;
-            padding: 11px 14px;
-            border: 1px solid white;
-            border-radius: 4px;
-            background: white;
-            color: #17365d;
-            font: inherit;
-            font-weight: 600;
-            text-align: center;
-            cursor: pointer;
-        }
-
-        .file-button:hover,
-        .file-button:focus {
-            background: #e8eef5;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        #message {
-            display: none;
-            margin-top: 12px;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 14px;
-            line-height: 1.4;
-            white-space: pre-line;
-            overflow-wrap: anywhere;
-        }
-
-        #message.success {
-            display: block;
-            background: #e7f5ea;
-            color: #185c2e;
-        }
-
-        #message.warning {
-            display: block;
-            background: #fff4ce;
-            color: #5c4500;
-        }
-
-        #message.error {
-            display: block;
-            background: #fde8e8;
-            color: #8a1c1c;
-        }
-
-        .leaflet-control-layers {
-            max-width: 70vw;
-        }
-
-        /* Keep the basemap selector obvious and independent of Leaflet's
-           little layers.png icon, which can be slow or fail to appear on
-           some mobile connections. */
-        .leaflet-top.leaflet-right {
-            z-index: 1200;
-        }
-
-        .leaflet-control-layers-toggle {
-            width: auto !important;
-            height: auto !important;
-            min-width: 48px;
-            padding: 9px 10px;
-            box-sizing: border-box;
-            background-image: none !important;
-            text-decoration: none;
-            text-align: center;
-        }
-
-        .leaflet-control-layers-toggle::before {
-            content: "Maps";
-            color: #17365d;
-            font: 600 13px/1.2 "Segoe UI", Arial, sans-serif;
-        }
-
-        @media (max-width: 700px) {
-            #controls {
-                width: min(290px, calc(100% - 70px));
-                max-height: 48vh;
-                overflow-y: auto;
-                padding: 12px;
-            }
-
-            #controls.collapsed {
-                width: 48px;
-                padding: 6px;
-                overflow: hidden;
-            }
-
-            #controls h1 {
-                margin-bottom: 10px;
-                font-size: 16px;
-            }
-
-            .file-button {
-                margin-bottom: 8px;
-                padding: 10px 12px;
-                font-size: 15px;
-            }
-
-            #message {
-                margin-top: 8px;
-                font-size: 13px;
-            }
-        }
-    </style>
+#controls { position:absolute; top:10px; left:10px; width:min(310px,calc(100% - 80px)); box-sizing:border-box; padding:14px; background:#17365d; color:#fff; border-radius:7px; box-shadow:2px 2px 10px rgba(0,0,0,.22); z-index:1100; transition:width .15s ease,padding .15s ease; }
+#controls.collapsed { width:48px; padding:6px; }
+.controls-header { display:flex; align-items:flex-start; gap:8px; }
+#controls h1 { flex:1; margin:2px 0 14px; font-size:20px; line-height:1.2; font-weight:600; }
+#panel-toggle { flex:0 0 36px; width:36px; height:36px; padding:0; border:1px solid rgba(255,255,255,.85); border-radius:4px; background:#fff; color:#17365d; font:700 23px/1 Arial,sans-serif; cursor:pointer; }
+#controls.collapsed .controls-header { display:block; }
+#controls.collapsed h1,#controls.collapsed .controls-body { display:none; }
+.file-button { display:block; width:100%; box-sizing:border-box; margin-bottom:10px; padding:11px 14px; border:1px solid #fff; border-radius:4px; background:#fff; color:#17365d; font:600 16px "Segoe UI",Arial,sans-serif; text-align:center; cursor:pointer; }
+.file-input { display:none; }
+#message { display:none; margin-top:12px; padding:10px; border-radius:4px; font-size:14px; line-height:1.4; white-space:pre-line; overflow-wrap:anywhere; }
+#message.success { display:block; background:#e7f5ea; color:#185c2e; }
+#message.warning { display:block; background:#fff4ce; color:#5c4500; }
+#message.error { display:block; background:#fde8e8; color:#8a1c1c; }
+.leaflet-top.leaflet-right { z-index:1200; }
+.leaflet-control-layers-toggle { display:block; min-width:52px; padding:10px 11px; box-sizing:border-box; text-decoration:none; text-align:center; cursor:pointer; }
+.leaflet-control-layers-toggle::before { content:"Maps"; color:#17365d; font:600 13px/1.2 "Segoe UI",Arial,sans-serif; }
+@media (max-width:700px) {
+  #controls { width:min(290px,calc(100% - 70px)); max-height:48vh; overflow-y:auto; padding:12px; }
+  #controls.collapsed { width:48px; padding:6px; overflow:hidden; }
+  #controls h1 { margin-bottom:10px; font-size:16px; }
+  .file-button { margin-bottom:8px; padding:10px 12px; font-size:15px; }
+  #message { margin-top:8px; font-size:13px; }
+}
+</style>
 </head>
-
 <body>
-    <div id="app">
-        <aside id="controls" aria-label="Map controls">
-            <div class="controls-header">
-                <h1>Location Maps Prototype</h1>
-                <button
-                    id="panel-toggle"
-                    type="button"
-                    aria-expanded="true"
-                    aria-controls="controls-body"
-                    aria-label="Collapse map controls"
-                    title="Collapse map controls"
-                >−</button>
-            </div>
-
-            <div id="controls-body" class="controls-body">
-                <label class="file-button" for="geojson-input">
-                    Load order limits
-                </label>
-
-                <button id="location-button" class="file-button" type="button">
-                    Show my location
-                </button>
-
-                <input
-                    id="geojson-input"
-                    class="file-input"
-                    type="file"
-                    accept=".geojson,.json,application/geo+json,application/json"
-                >
-
-                <div id="message" role="status" aria-live="polite"></div>
-            </div>
-        </aside>
-
-        <main id="map" aria-label="Interactive map"></main>
+<div id="app">
+  <aside id="controls" aria-label="Map controls">
+    <div class="controls-header">
+      <h1>Location Maps Prototype</h1>
+      <button id="panel-toggle" type="button" aria-expanded="true" aria-controls="controls-body" aria-label="Collapse map controls" title="Collapse map controls">−</button>
     </div>
+    <div id="controls-body" class="controls-body">
+      <label class="file-button" for="geojson-input">Load order limits</label>
+      <button id="location-button" class="file-button" type="button">Show my location</button>
+      <input id="geojson-input" class="file-input" type="file" accept=".geojson,.json,application/geo+json,application/json">
+      <div id="message" role="status" aria-live="polite"></div>
+    </div>
+  </aside>
+  <main id="map" aria-label="Interactive map"></main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+"use strict";
+const controls=document.getElementById("controls");
+const panelToggle=document.getElementById("panel-toggle");
+const geojsonInput=document.getElementById("geojson-input");
+const locationButton=document.getElementById("location-button");
+function setControlsCollapsed(collapsed){
+  controls.classList.toggle("collapsed",collapsed);
+  panelToggle.textContent=collapsed?"☰":"−";
+  panelToggle.setAttribute("aria-expanded",String(!collapsed));
+  panelToggle.setAttribute("aria-label",collapsed?"Expand map controls":"Collapse map controls");
+  panelToggle.title=collapsed?"Expand map controls":"Collapse map controls";
+}
+panelToggle.addEventListener("click",()=>setControlsCollapsed(!controls.classList.contains("collapsed")));
 
-    <script
-        src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-        crossorigin=""
-    ></script>
+const map=L.map("map",{zoomControl:true,touchZoom:true,dragging:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:true,keyboard:true,zoomAnimation:false,fadeAnimation:false}).setView([54.5,-3.0],6);
+map.createPane("orderLimitsPane");
+map.getPane("orderLimitsPane").style.zIndex=450;
+map.getPane("orderLimitsPane").style.pointerEvents="none";
 
-    <script>
-        "use strict";
+const tileOptions={maxZoom:19,updateWhenIdle:true,updateWhenZooming:false,keepBuffer:1};
+const streetMap=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{...tileOptions,attribution:"Tiles &copy; Esri"});
+const topographicMap=L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{maxZoom:17,updateWhenIdle:true,updateWhenZooming:false,keepBuffer:1,attribution:"Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)"});
+const aerialMap=L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{...tileOptions,attribution:"Tiles &copy; Esri and imagery providers"});
+streetMap.addTo(map);
+const layerControl=L.control.layers({"Street map":streetMap,"Topographic map":topographicMap,"Aerial imagery":aerialMap},{},{collapsed:true}).addTo(map);
 
-        const controls = document.getElementById("controls");
-        const panelToggle = document.getElementById("panel-toggle");
-        const geojsonInput = document.getElementById("geojson-input");
-        const locationButton = document.getElementById("location-button");
-
-        function setControlsCollapsed(collapsed) {
-            controls.classList.toggle("collapsed", collapsed);
-            panelToggle.textContent = collapsed ? "☰" : "−";
-            panelToggle.setAttribute("aria-expanded", String(!collapsed));
-            panelToggle.setAttribute(
-                "aria-label",
-                collapsed ? "Expand map controls" : "Collapse map controls"
-            );
-            panelToggle.title =
-                collapsed ? "Expand map controls" : "Collapse map controls";
-        }
-
-        panelToggle.addEventListener("click", function () {
-            setControlsCollapsed(!controls.classList.contains("collapsed"));
-        });
-
-        const map = L.map("map", {
-            zoomControl: true,
-            touchZoom: true,
-            dragging: true,
-            scrollWheelZoom: true,
-            doubleClickZoom: true,
-            boxZoom: true,
-            keyboard: true
-        }).setView([54.5, -3.0], 6);
-
-        map.createPane("orderLimitsPane");
-        map.getPane("orderLimitsPane").style.zIndex = 450;
-        map.getPane("orderLimitsPane").style.pointerEvents = "none";
-
-        const streetMap = L.tileLayer(
-            "https://server.arcgisonline.com/ArcGIS/rest/services/" +
-                "World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-            {
-                maxZoom: 19,
-                updateWhenIdle: true,
-                updateWhenZooming: false,
-                keepBuffer: 1,
-                attribution: "Tiles &copy; Esri"
-            }
-        );
-
-        const topographicMap = L.tileLayer(
-            "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-            {
-                maxZoom: 17,
-                updateWhenIdle: true,
-                updateWhenZooming: false,
-                keepBuffer: 1,
-                attribution:
-                    "Map data: &copy; OpenStreetMap contributors, SRTM" +
-                    " | Map style: &copy; OpenTopoMap (CC-BY-SA)"
-            }
-        );
-
-        const aerialMap = L.tileLayer(
-            "https://server.arcgisonline.com/ArcGIS/rest/services/" +
-                "World_Imagery/MapServer/tile/{z}/{y}/{x}",
-            {
-                maxZoom: 19,
-                updateWhenIdle: true,
-                updateWhenZooming: false,
-                keepBuffer: 1,
-                attribution: "Tiles &copy; Esri and imagery providers"
-            }
-        );
-
-        streetMap.addTo(map);
-
-        const layerControl = L.control.layers(
-            {
-                "Street map": streetMap,
-                "Topographic map": topographicMap,
-                "Aerial imagery": aerialMap
-            },
-            {},
-            { collapsed: true }
-        ).addTo(map);
-
-        let orderLimitsLayer = null;
-        let locationMarker = null;
-        let accuracyCircle = null;
-        let locationWatchId = null;
-
-        function showMessage(text, type) {
-            const message = document.getElementById("message");
-            message.textContent = text;
-            message.className = type;
-        }
-
-        locationButton.addEventListener("click", function () {
-            if (!navigator.geolocation) {
-                showMessage(
-                    "Location services are not supported by this browser.",
-                    "error"
-                );
-                return;
-            }
-
-            if (locationWatchId !== null) {
-                navigator.geolocation.clearWatch(locationWatchId);
-                locationWatchId = null;
-                locationButton.textContent = "Show my location";
-                showMessage("Location tracking stopped.", "warning");
-                return;
-            }
-
-            showMessage("Finding your location...", "warning");
-
-            locationWatchId = navigator.geolocation.watchPosition(
-                updateLocation,
-                locationError,
-                {
-                    enableHighAccuracy: true,
-                    timeout: 15000,
-                    maximumAge: 5000
-                }
-            );
-
-            locationButton.textContent = "Stop location tracking";
-        });
-
-        function updateLocation(position) {
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
-            const accuracy = position.coords.accuracy;
-            const latlng = [latitude, longitude];
-
-            if (locationMarker === null) {
-                locationMarker = L.circleMarker(latlng, {
-                    pane: "markerPane",
-                    radius: 9,
-                    color: "#ffffff",
-                    weight: 3,
-                    fillColor: "#1565c0",
-                    fillOpacity: 1,
-                    interactive: false
-                }).addTo(map);
-
-                accuracyCircle = L.circle(latlng, {
-                    radius: accuracy,
-                    color: "#1565c0",
-                    weight: 1,
-                    opacity: 0.7,
-                    fillColor: "#64b5f6",
-                    fillOpacity: 0.15,
-                    interactive: false
-                }).addTo(map);
-
-                map.setView(latlng, 17);
-            } else {
-                locationMarker.setLatLng(latlng);
-                accuracyCircle.setLatLng(latlng);
-                accuracyCircle.setRadius(accuracy);
-            }
-
-            showMessage(
-                "Location found. Estimated accuracy: " +
-                    Math.round(accuracy) +
-                    " metres.",
-                "success"
-            );
-        }
-
-        function locationError(error) {
-            let text = "Your location could not be obtained.";
-
-            if (error.code === error.PERMISSION_DENIED) {
-                text =
-                    "Location permission was denied. Allow location " +
-                    "access in the browser settings and try again.";
-            } else if (error.code === error.POSITION_UNAVAILABLE) {
-                text = "Your phone could not determine its current location.";
-            } else if (error.code === error.TIMEOUT) {
-                text =
-                    "The location request timed out. Try moving outside " +
-                    "or nearer to a window.";
-            }
-
-            showMessage(text, "error");
-
-            if (locationWatchId !== null) {
-                navigator.geolocation.clearWatch(locationWatchId);
-                locationWatchId = null;
-            }
-
-            locationButton.textContent = "Show my location";
-        }
-
-        function containsPolygon(geojson) {
-            if (!geojson || typeof geojson !== "object") {
-                return false;
-            }
-
-            if (
-                geojson.type === "Polygon" ||
-                geojson.type === "MultiPolygon"
-            ) {
-                return true;
-            }
-
-            if (geojson.type === "Feature" && geojson.geometry) {
-                return (
-                    geojson.geometry.type === "Polygon" ||
-                    geojson.geometry.type === "MultiPolygon"
-                );
-            }
-
-            if (
-                geojson.type === "FeatureCollection" &&
-                Array.isArray(geojson.features)
-            ) {
-                return geojson.features.some(function (feature) {
-                    return (
-                        feature.geometry &&
-                        (
-                            feature.geometry.type === "Polygon" ||
-                            feature.geometry.type === "MultiPolygon"
-                        )
-                    );
-                });
-            }
-
-            return false;
-        }
-
-        geojsonInput.addEventListener("change", function () {
-            const file = geojsonInput.files[0];
-
-            if (!file) {
-                return;
-            }
-
-            const reader = new FileReader();
-
-            reader.addEventListener("load", function (event) {
-                try {
-                    const geojson = JSON.parse(event.target.result);
-
-                    if (!containsPolygon(geojson)) {
-                        throw new Error(
-                            "The file does not contain a GeoJSON Polygon or MultiPolygon."
-                        );
-                    }
-
-                    const newLayer = L.geoJSON(geojson, {
-                        pane: "orderLimitsPane",
-                        interactive: false,
-                        style: {
-                            color: "#d32f2f",
-                            weight: 3,
-                            opacity: 1,
-                            fillColor: "#ef5350",
-                            fillOpacity: 0.22
-                        }
-                    });
-
-                    const bounds = newLayer.getBounds();
-
-                    if (!bounds.isValid()) {
-                        throw new Error(
-                            "The GeoJSON polygon has no valid map coordinates."
-                        );
-                    }
-
-                    if (orderLimitsLayer) {
-                        map.removeLayer(orderLimitsLayer);
-                        layerControl.removeLayer(orderLimitsLayer);
-                    }
-
-                    orderLimitsLayer = newLayer.addTo(map);
-                    layerControl.addOverlay(orderLimitsLayer, "Order limits");
-
-                    map.fitBounds(bounds, { padding: [20, 20] });
-                    showMessage("Order limits loaded successfully.", "success");
-                } catch (error) {
-                    showMessage(
-                        "Could not load the file. " +
-                            error.message +
-                            " Please select valid GeoJSON using WGS84 coordinates.",
-                        "error"
-                    );
-                } finally {
-                    geojsonInput.value = "";
-                }
-            });
-
-            reader.addEventListener("error", function () {
-                showMessage(
-                    "The selected GeoJSON file could not be read.",
-                    "error"
-                );
-                geojsonInput.value = "";
-            });
-
-            reader.readAsText(file);
-        });
-    </script>
+let orderLimitsLayer=null,locationMarker=null,accuracyCircle=null,locationWatchId=null;
+function showMessage(text,type){ const m=document.getElementById("message"); m.textContent=text; m.className=type; }
+locationButton.addEventListener("click",function(){
+  if(!navigator.geolocation){showMessage("Location services are not supported by this browser.","error");return;}
+  if(locationWatchId!==null){navigator.geolocation.clearWatch(locationWatchId);locationWatchId=null;locationButton.textContent="Show my location";showMessage("Location tracking stopped.","warning");return;}
+  showMessage("Finding your location...","warning");
+  locationWatchId=navigator.geolocation.watchPosition(updateLocation,locationError,{enableHighAccuracy:true,timeout:15000,maximumAge:5000});
+  locationButton.textContent="Stop location tracking";
+});
+function updateLocation(position){
+  const latlng=[position.coords.latitude,position.coords.longitude],accuracy=position.coords.accuracy;
+  if(locationMarker===null){
+    locationMarker=L.circleMarker(latlng,{pane:"markerPane",radius:9,color:"#fff",weight:3,fillColor:"#1565c0",fillOpacity:1,interactive:false}).addTo(map);
+    accuracyCircle=L.circle(latlng,{radius:accuracy,color:"#1565c0",weight:1,opacity:.7,fillColor:"#64b5f6",fillOpacity:.15,interactive:false}).addTo(map);
+    map.setView(latlng,17);
+  } else { locationMarker.setLatLng(latlng); accuracyCircle.setLatLng(latlng); accuracyCircle.setRadius(accuracy); }
+  showMessage("Location found. Estimated accuracy: "+Math.round(accuracy)+" metres.","success");
+}
+function locationError(error){
+  let text="Your location could not be obtained.";
+  if(error.code===error.PERMISSION_DENIED) text="Location permission was denied. Allow location access in the browser settings and try again.";
+  else if(error.code===error.POSITION_UNAVAILABLE) text="Your phone could not determine its current location.";
+  else if(error.code===error.TIMEOUT) text="The location request timed out. Try moving outside or nearer to a window.";
+  showMessage(text,"error");
+  if(locationWatchId!==null){navigator.geolocation.clearWatch(locationWatchId);locationWatchId=null;}
+  locationButton.textContent="Show my location";
+}
+function containsPolygon(g){
+  if(!g||typeof g!=="object") return false;
+  if(g.type==="Polygon"||g.type==="MultiPolygon") return true;
+  if(g.type==="Feature"&&g.geometry) return g.geometry.type==="Polygon"||g.geometry.type==="MultiPolygon";
+  if(g.type==="FeatureCollection"&&Array.isArray(g.features)) return g.features.some(f=>f.geometry&&(f.geometry.type==="Polygon"||f.geometry.type==="MultiPolygon"));
+  return false;
+}
+geojsonInput.addEventListener("change",function(){
+  const file=geojsonInput.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.addEventListener("load",function(event){
+    try{
+      const geojson=JSON.parse(event.target.result);
+      if(!containsPolygon(geojson)) throw new Error("The file does not contain a GeoJSON Polygon or MultiPolygon.");
+      const newLayer=L.geoJSON(geojson,{pane:"orderLimitsPane",interactive:false,style:{color:"#d32f2f",weight:3,opacity:1,fillColor:"#ef5350",fillOpacity:.22}});
+      const bounds=newLayer.getBounds(); if(!bounds.isValid()) throw new Error("The GeoJSON polygon has no valid map coordinates.");
+      if(orderLimitsLayer){map.removeLayer(orderLimitsLayer);layerControl.removeLayer(orderLimitsLayer);}
+      orderLimitsLayer=newLayer.addTo(map); layerControl.addOverlay(orderLimitsLayer,"Order limits");
+      map.fitBounds(bounds,{padding:[20,20]}); showMessage("Order limits loaded successfully.","success");
+    }catch(error){showMessage("Could not load the file. "+error.message+" Please select valid GeoJSON using WGS84 coordinates.","error");}
+    finally{geojsonInput.value="";}
+  });
+  reader.addEventListener("error",function(){showMessage("The selected GeoJSON file could not be read.","error");geojsonInput.value="";});
+  reader.readAsText(file);
+});
+</script>
 </body>
 </html>
